@@ -302,12 +302,22 @@ export const parseOfflineVoiceCommand = (
   };
 };
 
-// Call server-side Gemini API with fallback
+// Call server-side Gemini API or direct client key with offline NLP fallback
 export const interpretVoiceCommandWithGemini = async (
   rawText: string,
   availableServices: ServiceType[],
   appointments: Appointment[]
 ): Promise<VoiceInterpretation> => {
+  const appointmentsSummary = appointments.map(a => ({
+    date: a.date,
+    time: a.time,
+    client: a.clientName,
+    address: a.clientAddress,
+    service: a.serviceTypeName,
+    status: a.status
+  }));
+
+  // 1. Try backend endpoint first (if running as Web Service)
   try {
     const res = await fetch('/api/gemini', {
       method: 'POST',
@@ -315,14 +325,7 @@ export const interpretVoiceCommandWithGemini = async (
       body: JSON.stringify({
         transcript: rawText,
         services: availableServices.map(s => s.name),
-        appointmentsSummary: appointments.map(a => ({
-          date: a.date,
-          time: a.time,
-          client: a.clientName,
-          address: a.clientAddress,
-          service: a.serviceTypeName,
-          status: a.status
-        })),
+        appointmentsSummary,
         currentDate: getFormattedDate(0),
         currentTime: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
       }),
@@ -335,9 +338,56 @@ export const interpretVoiceCommandWithGemini = async (
       }
     }
   } catch (e) {
-    console.warn('Backend Gemini API call offline or unavailable, falling back to local NLP engine:', e);
+    // Backend unavailable, continue to next options
   }
 
-  // Graceful local NLP parsing
+  // 2. If static site has VITE_GEMINI_API_KEY configured in environment
+  const clientApiKey = import.meta.env.VITE_GEMINI_API_KEY;
+  if (clientApiKey) {
+    try {
+      const systemInstruction = `Você é o assistente inteligente da CAST Serviços Técnicos.
+Data atual: ${getFormattedDate(0)}.
+Serviços disponíveis: ${availableServices.map(s => s.name).join(', ')}.
+Atendimentos cadastrados: ${JSON.stringify(appointmentsSummary)}.
+
+Analise a mensagem falada e responda estritamente em formato JSON:
+Para novo agendamento completo:
+{ "action": "create_appointment", "clientName": "...", "clientAddress": "...", "serviceTypeName": "...", "date": "YYYY-MM-DD", "time": "HH:MM", "responseSpeech": "..." }
+
+Para comando incompleto:
+{ "action": "incomplete_command", "missingFields": ["..."], "clarificationMessage": "...", "responseSpeech": "..." }
+
+Para consulta da agenda:
+{ "action": "query_agenda", "queryAnswer": "...", "responseSpeech": "..." }`;
+
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${clientApiKey}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: rawText }] }],
+            systemInstruction: { parts: [{ text: systemInstruction }] },
+            generationConfig: { responseMimeType: 'application/json' }
+          })
+        }
+      );
+
+      if (response.ok) {
+        const result = await response.json();
+        const candidateText = result.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (candidateText) {
+          const parsed = JSON.parse(candidateText);
+          if (parsed && parsed.action) {
+            return parsed as VoiceInterpretation;
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('Direct Gemini API error, falling back to local NLP:', err);
+    }
+  }
+
+  // 3. Graceful offline local Portuguese NLP engine
   return parseOfflineVoiceCommand(rawText, availableServices, appointments);
 };

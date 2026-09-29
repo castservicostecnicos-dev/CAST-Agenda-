@@ -25,7 +25,10 @@
         "name": { "type": "string" },
         "description": { "type": "string" },
         "tools": { "type": "array" },
-        "createdAt": { "type": "string" }
+        "estimatedDuration": { "type": "number" },
+        "basePrice": { "type": "number" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
       },
       "required": ["id", "name", "tools"]
     },

@@ -18,7 +18,10 @@ export interface ServiceType {
   name: string;
   description?: string;
   tools: string[];
+  estimatedDuration?: number; // minutos
+  basePrice?: number; // R$
   createdAt: string;
+  updatedAt?: string;
 }
 
 export interface Client {

@@ -23,8 +23,12 @@ interface DataContextType {
   // Client methods
   createOrUpdateClient: (client: Omit<Client, 'id' | 'createdAt'> & { id?: string }) => Promise<Client>;
 
-  // Service methods (Master can manage, all can read)
-  createServiceType: (name: string, description: string, tools: string[]) => Promise<ServiceType>;
+  // Service methods (All users can manage and register services for appointments)
+  createServiceType: (
+    serviceOrName: { name: string; description?: string; tools: string[]; estimatedDuration?: number; basePrice?: number } | string,
+    legacyDescription?: string,
+    legacyTools?: string[]
+  ) => Promise<ServiceType>;
   updateServiceType: (service: ServiceType) => Promise<void>;
   deleteServiceType: (id: string) => Promise<void>;
 
@@ -202,21 +206,47 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   // Services
-  const createServiceType = async (name: string, description: string, tools: string[]): Promise<ServiceType> => {
-    const newService: ServiceType = {
-      id: 'srv_' + Date.now(),
-      name: name.trim(),
-      description: description.trim(),
-      tools: tools.map(t => t.trim()).filter(Boolean),
-      createdAt: new Date().toISOString(),
-    };
+  const createServiceType = async (
+    serviceOrName: { name: string; description?: string; tools: string[]; estimatedDuration?: number; basePrice?: number } | string,
+    legacyDescription?: string,
+    legacyTools?: string[]
+  ): Promise<ServiceType> => {
+    let newService: ServiceType;
+
+    if (typeof serviceOrName === 'string') {
+      newService = {
+        id: 'srv_' + Date.now(),
+        name: serviceOrName.trim(),
+        description: (legacyDescription || '').trim(),
+        tools: (legacyTools || []).map(t => t.trim()).filter(Boolean),
+        createdAt: new Date().toISOString(),
+      };
+    } else {
+      newService = {
+        id: 'srv_' + Date.now(),
+        name: serviceOrName.name.trim(),
+        description: serviceOrName.description?.trim() || '',
+        tools: serviceOrName.tools.map(t => t.trim()).filter(Boolean),
+        estimatedDuration: serviceOrName.estimatedDuration,
+        basePrice: serviceOrName.basePrice,
+        createdAt: new Date().toISOString(),
+      };
+    }
+
     await storage.saveService(newService);
     setServices(storage.getServices());
     return newService;
   };
 
   const updateServiceType = async (service: ServiceType): Promise<void> => {
-    await storage.saveService(service);
+    const updatedService: ServiceType = {
+      ...service,
+      name: service.name.trim(),
+      description: service.description?.trim() || '',
+      tools: service.tools.map(t => t.trim()).filter(Boolean),
+      updatedAt: new Date().toISOString(),
+    };
+    await storage.saveService(updatedService);
     setServices(storage.getServices());
   };
 
