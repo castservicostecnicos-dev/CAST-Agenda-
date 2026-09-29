@@ -1,0 +1,6 @@
+{
+  "name": "CAST Serviços Técnicos",
+  "description": "Gerenciamento de agenda de serviços técnicos com ferramentas automáticas e comando de voz.",
+  "requestFramePermissions": ["microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

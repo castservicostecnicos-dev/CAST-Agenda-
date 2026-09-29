@@ -1,0 +1,107 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "System user with either master or technician access role",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "role": { "type": "string", "enum": ["master", "technician"] },
+        "status": { "type": "string", "enum": ["active", "inactive"] },
+        "password": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "name", "email", "role", "status"]
+    },
+    "ServiceType": {
+      "title": "ServiceType",
+      "description": "Technical service category with associated tool list",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "tools": { "type": "array" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "name", "tools"]
+    },
+    "Client": {
+      "title": "Client",
+      "description": "Customer record with service address and contact details",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "address": { "type": "string" },
+        "phone": { "type": "string" },
+        "notes": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "name", "address"]
+    },
+    "Appointment": {
+      "title": "Appointment",
+      "description": "Field technical service appointment with tool checklist and status",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "clientName": { "type": "string" },
+        "clientAddress": { "type": "string" },
+        "clientPhone": { "type": "string" },
+        "serviceTypeId": { "type": "string" },
+        "serviceTypeName": { "type": "string" },
+        "date": { "type": "string" },
+        "time": { "type": "string" },
+        "status": { "type": "string", "enum": ["scheduled", "in_progress", "completed", "cancelled"] },
+        "notes": { "type": "string" },
+        "tools": { "type": "array" },
+        "toolChecklist": { "type": "object" },
+        "reminderMinutes": { "type": "number" },
+        "assignedTo": { "type": "string" },
+        "createdBy": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "clientName", "clientAddress", "serviceTypeName", "date", "time", "status"]
+    },
+    "CloudBackup": {
+      "title": "CloudBackup",
+      "description": "Administrative database snapshot backup for master profile",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "timestamp": { "type": "string" },
+        "createdBy": { "type": "string" },
+        "snapshotData": { "type": "string" },
+        "stats": { "type": "string" }
+      },
+      "required": ["id", "timestamp", "snapshotData"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User accounts and access credentials"
+    },
+    "/serviceTypes/{serviceTypeId}": {
+      "schema": "ServiceType",
+      "description": "Catalog of technical service types and required tool sets"
+    },
+    "/clients/{clientId}": {
+      "schema": "Client",
+      "description": "Registered clients with default addresses"
+    },
+    "/appointments/{appointmentId}": {
+      "schema": "Appointment",
+      "description": "Technical service schedule and tool checklists"
+    },
+    "/backups/{backupId}": {
+      "schema": "CloudBackup",
+      "description": "Master administrative cloud backups"
+    }
+  }
+}
